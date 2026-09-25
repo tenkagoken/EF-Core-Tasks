@@ -1,0 +1,41 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore EFCoreExercises.sln
+
+      - name: Build
+        run: dotnet build EFCoreExercises.sln --configuration Release --no-restore
+
+      - name: Test when test projects exist
+        shell: bash
+        run: |
+          test_projects="$(find . -type f \( -name '*Tests.csproj' -o -name '*Test.csproj' \) -print)"
+          if [ -z "$test_projects" ]; then
+            echo "No test projects found; build verification is complete."
+            exit 0
+          fi
+
+          while IFS= read -r project; do
+            dotnet test "$project" --configuration Release
+          done <<< "$test_projects"
